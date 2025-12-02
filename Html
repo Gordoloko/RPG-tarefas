@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG de Tarefas XP</title>
+
+    <meta name="theme-color" content="#6c5ce7"> 
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"> 
+    <meta name="apple-mobile-web-app-capable" content="yes"> 
+    <link rel="manifest" href="manifest.json"> 
+    <style>
+        :root {
+            --primary: #6c5ce7; /* Roxo */
+            --secondary: #a29bfe; /* Roxo Claro */
+            --success: #00b894; /* Verde */
+            --danger: #ff7675; /* Vermelho */
+            --background: #f4f7f9; /* Fundo Levemente Cinza */
+            --surface: #ffffff; /* Superfície Branca */
+            --text: #2d3436; /* Texto Escuro */
+            --card-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --subtle-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 0; 
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%; 
+            max-width: 500px;
+            background: var(--surface);
+            border-radius: 0;
+            box-shadow: none;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* --- 1. CABEÇALHO / HUD --- */
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px 20px 20px;
+            text-align: center;
+            border-bottom-left-radius: 0; 
+            border-bottom-right-radius: 0;
+        }
+
+        .level-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        .total-score {
+            font-size: 4em;
+            font-weight: 900;
+            margin: 5px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            transition: color 0.5s ease, transform 0.5s ease;
+        }
+
+        .progress-container {
+            background: rgba(0,0,0,0.2);
+            height: 8px;
+            border-radius: 4px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--success);
+            transition: width 0.5s ease;
+        }
+
+        #resetBtn {
+            background: var(--danger);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            transition: background 0.2s;
+        }
+        
+        /* --- 2. ÁREAS DE INPUT --- */
+        .section-card {
+            background: var(--surface);
+            padding: 15px; 
+            margin: 10px; 
+            border-radius: 8px;
+            box-shadow: var(--subtle-shadow);
+        }
+
+        .section-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            color: var(--text);
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column; 
+            gap: 10px;
+        }
+        
+        #taskInput, #newPenaltyInput { 
+            flex: none; 
+            width: 100%;
+            box-sizing: border-box; 
+        }
+        
+        .points-and-btn {
+            display: flex;
+            gap: 10px;
+        }
+
+        #pointsInput, #penaltyAmountInput { 
+            flex: 1; 
+            min-width: 0; 
+            text-align: center;
+        }
+        
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 15px; 
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            transition: background 0.2s;
+            flex: 1; 
+        }
+
+        input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus { border-color: var(--primary); }
+        #addBtn { background: var(--primary); }
+        #addPenaltyBtn { background: var(--danger); }
+
+        /* --- 3. ESTILIZAÇÃO DA LISTA --- */
+        
+        .list-separator {
+            padding: 10px 10px;
+            font-weight: bold;
+            color: var(--text);
+            background: var(--background);
+            text-align: left;
+            border-top: 1px solid #eee;
+            font-size: 0.9em;
+        }
+        
+        ul {
+            list-style: none;
+            padding: 0 10px; 
+            margin: 0;
+        }
+
+        li {
+            margin-bottom: 8px; 
+            padding: 10px; 
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column; 
+            align-items: flex-start;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            border-left: 5px solid; 
+            transition: transform 0.2s;
+        }
+
+        /* Cores das Listas */
+        #taskList li { border-left-color: var(--primary); }
+        #penaltyList li { border-left-color: var(--danger); }
+        
+        /* Info e Pontos */
+        .task-info { flex-grow: 1; margin-right: 0; width: 100%; }
+        .task-info strong { display: block; margin-bottom: 5px; } 
+        
+        .task-points, .penalty-points { 
+            font-size: 0.9em; 
+            font-weight: bold; 
+            white-space: nowrap; 
+        }
+        .task-points { color: var(--success); }
+        .penalty-points { color: var(--danger); }
+
+        .actions { 
+            display: flex; 
+            gap: 8px; 
+            align-items: center; 
+            margin-top: 8px; 
+            width: 100%; 
+            justify-content: space-between; 
+        }
+
+        .complete-btn, .punish-btn {
+            border: 2px solid;
+            padding: 6px 10px; 
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.8em;
+            background: white;
+            white-space: nowrap;
+            flex-grow: 1; 
+            text-align: center;
+        }
+        
+        .complete-btn { border-color: var(--success); color: var(--success); }
+        .complete-btn:hover { background: var(--success); color: white; }
+
+        .punish-btn { border-color: var(--danger); color: var(--danger); }
+        .punish-btn:hover { background: var(--danger); color: white; }
+
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: #b2bec3;
+            cursor: pointer;
+            font-size: 1.1em;
+            padding: 5px;
+            margin-left: 5px;
+        }
+        .delete-btn:hover { color: var(--danger); }
+
+        /* --- 4. ANIMAÇÕES --- */
+        .flash-success { animation: flashGreen 0.5s ease; }
+        @keyframes flashGreen { 50% { background-color: #d1fae5; transform: scale(1.01); } }
+
+        .flash-danger { animation: flashRed 0.5s ease; }
+        @keyframes flashRed { 50% { color: var(--danger); transform: scale(1.1); } }
+
+        /* ============================================== */
+        /* MEDIA QUERY PARA TELAS MAIORES (TABLETS E DESKTOPS) */
+        /* ============================================== */
+        @media (min-width: 500px) {
+            body { padding: 20px 0; }
+            .container {
+                border-radius: 15px;
+                box-shadow: var(--card-shadow);
+                min-height: 100%;
+            }
+            .header {
+                border-bottom-left-radius: 15px;
+                border-bottom-right-radius: 15px;
+            }
+            .section-card {
+                padding: 20px;
+                margin: 15px;
+            }
+            .section-card h3 {
+                margin: 0 0 15px 0;
+                font-size: 1.1em;
+            }
+            .input-group {
+                flex-direction: row; 
+            }
+            .points-and-btn {
+                flex: 1;
+            }
+            #pointsInput, #penaltyAmountInput { flex: 1; }
+            #taskInput, #newPenaltyInput { flex: 2; }
+            button { flex: 1; }
+            
+            /* Lista */
+            ul { padding: 0 15px; }
+            li {
+                padding: 15px;
+                margin-bottom: 10px;
+                flex-direction: row; 
+                align-items: center;
+            }
+            .actions {
+                margin-top: 0;
+                width: auto;
+                justify-content: flex-end;
+            }
+            .task-info { margin-right: 10px; }
+            .task-info strong { display: inline; margin-bottom: 0; }
+            .complete-btn, .punish-btn {
+                padding: 6px 12px;
+                flex-grow: 0;
+                width: auto;
+            }
+            .delete-btn {
+                margin-left: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <span class="level-badge" id="levelDisplay">Nível 1</span>
+        <div class="total-score" id="scoreDisplay">0</div>
+        <div>PONTOS DE EXPERIÊNCIA (XP)</div>
+        
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="xp-text" id="xpNextLevel">0 / 500 para o próximo nível</div>
+
+        <button id="resetBtn" onclick="resetLevel()">RESETAR NÍVEL</button>
+    </div>
+
+    <div class="section-card">
+        <h3>✨ Criar Tarefa Positiva</h3>
+        <div class="input-group">
+            <input type="text" id="taskInput" placeholder="Ex: Estudar 1 hora de código...">
+            <div class="points-and-btn">
+                <input type="number" id="pointsInput" value="50" min="10" placeholder="XP">
+                <button id="addBtn" onclick="addTask()">Criar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <h3 style="color: var(--danger);">🚨 Criar Penalidade Recorrente</h3>
+        <div class="input-group">
+            <input type="text" id="newPenaltyInput" placeholder="Ex: Procrastinar nas redes sociais">
+            <div class="points-and-btn">
+                <input type="number" id="penaltyAmountInput" value="20" min="1" placeholder="Perda XP">
+                <button id="addPenaltyBtn" onclick="addPenalty()">Criar Punição</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="list-separator">✅ TAREFAS POSITIVAS (GANHA XP)</div>
+    <ul id="taskList"></ul>
+
+    <div class="list-separator">❌ PENALIDADES RECORRENTES (PERDE XP)</div>
+    <ul id="penaltyList"></ul>
+
+    <div style="padding: 10px;"></div>
+</div>
+
+<script>
+    let score = 0;
+    let level = 1;
+    let tasks = [];
+    let penalties = []; 
+    const XP_PER_LEVEL = 500;
+
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const levelDisplay = document.getElementById('levelDisplay');
+    const progressBar = document.getElementById('progressBar');
+    const xpNextLevel = document.getElementById('xpNextLevel');
+    const taskList = document.getElementById('taskList');
+    const penaltyList = document.getElementById('penaltyList'); 
+    
+    // Inputs
+    const taskInput = document.getElementById('taskInput');
+    const pointsInput = document.getElementById('pointsInput');
+    const newPenaltyInput = document.getElementById('newPenaltyInput');
+    const penaltyAmountInput = document.getElementById('penaltyAmountInput');
+
+    window.onload = function() {
+        if(localStorage.getItem('rpg_score_v2')) {
+            score = parseInt(localStorage.getItem('rpg_score_v2'));
+            tasks = JSON.parse(localStorage.getItem('rpg_tasks_v2')) || [];
+            penalties = JSON.parse(localStorage.getItem('rpg_penalties_v2')) || []; 
+            updateHUD();
+            renderTasks();
+            renderPenalties();
+        }
+        
+        // REGISTRO DO SERVICE WORKER (PWA)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./service-worker.js')
+            .then(reg => console.log('Service Worker Registrado!', reg))
+            .catch(err => console.log('Erro ao registrar Service Worker:', err));
+        }
+    }
+
+    // Função para salvar dados no localStorage
+    function saveData() {
+        localStorage.setItem('rpg_score_v2', score);
+        localStorage.setItem('rpg_tasks_v2', JSON.stringify(tasks));
+        localStorage.setItem('rpg_penalties_v2', JSON.stringify(penalties)); 
+    }
+
+    // ===================================
+    // FUNÇÕES DE PENALIDADE
+    // ===================================
+
+    function addPenalty() {
+        const text = newPenaltyInput.value;
+        const pts = parseInt(penaltyAmountInput.value);
+
+        if (text === '' || isNaN(pts) || pts < 1) {
+            alert('Preencha a penalidade e o valor (perda mínima de 1 ponto).');
+            return;
+        }
+
+        const newPenalty = { id: Date.now(), text: text, penalty: pts };
+        penalties.push(newPenalty);
+        saveData();
+        renderPenalties();
+        
+        newPenaltyInput.value = '';
+        newPenaltyInput.focus();
+    }
+
+    // MANTÉM A PENALIDADE NA LISTA APÓS SER APLICADA
+    function applyPenalty(id, btnElement) {
+        const penalty = penalties.find(p => p.id === id);
+        if (penalty) {
+            score -= penalty.penalty;
+            
+            // Animação de flash vermelho na pontuação
+            scoreDisplay.classList.remove('flash-danger'); 
+            void scoreDisplay.offsetWidth; 
+            scoreDisplay.classList.add('flash-danger');
+
+            updateHUD();
+            saveData();
+            
+            // Animação visual na LI
+            const liElement = btnElement.closest('li');
+            liElement.classList.add('flash-danger'); 
+
+            setTimeout(() => {
+                scoreDisplay.classList.remove('flash-danger');
+                liElement.classList.remove('flash-danger');
+            }, 500); 
+        }
+    }
+    
+    function removePenalty(id) {
+        if(confirm("Deseja apagar essa penalidade recorrente para sempre?")) {
+            penalties = penalties.filter(p => p.id !== id);
+            saveData();
+            renderPenalties();
+        }
+    }
+
+    function renderPenalties() {
+        penaltyList.innerHTML = '';
+        if (penalties.length === 0) {
+            penaltyList.innerHTML = '<li style="text-align: center; border-left: none; background: none; box-shadow: none; color: #777;">Crie sua primeira penalidade recorrente!</li>';
+            return;
+        }
+
+        penalties.forEach(penalty => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div class="task-info">
+                    <strong>${penalty.text}</strong>
+                </div>
+                <div class="actions">
+                    <span class="penalty-points">-${penalty.penalty} XP</span>
+                    <button class="punish-btn" onclick="applyPenalty(${penalty.id}, this)">APLICAR</button>
+                    <button class="delete-btn" onclick="removePenalty(${penalty.id})" title="Apagar penalidade">✖</button>
+                </div>
+            `;
+            penaltyList.appendChild(li);
+        });
+    }
+
+    // ===================================
+    // FUNÇÕES DE TAREFA
+    // ===================================
+
+    function addTask() {
+        const text = taskInput.value;
+        const pts = parseInt(pointsInput.value);
+
+        if (text === '' || isNaN(pts) || pts < 10) {
+            alert('Preencha a missão (mínimo 10 pontos).');
+            return;
+        }
+
+        const newTask = { id: Date.now(), text: text, points: pts };
+        tasks.push(newTask);
+        saveData();
+        renderTasks();
+        
+        taskInput.value = '';
+        taskInput.focus();
+    }
+
+    // MANTÉM A TAREFA NA LISTA APÓS SER CONCLUÍDA
+    function completeTask(id, btnElement) {
+        const task = tasks.find(t => t.id === id);
+        if (task) {
+            score += task.points;
+            
+            updateHUD();
+            saveData();
+
+            const liElement = btnElement.closest('li');
+            liElement.classList.add('flash-success');
+            
+            setTimeout(() => {
+                liElement.classList.remove('flash-success');
+            }, 500);
+        }
+    }
+
+    function removeTask(id) {
+        if(confirm("Deseja apagar essa tarefa da lista para sempre?")) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveData();
+            renderTasks();
+        }
+    }
+
+    function renderTasks() {
+        taskList.innerHTML = '';
+        if (tasks.length === 0) {
+            taskList.innerHTML = '<li style="text-align: center; border-left: none; background: none; box-shadow: none; color: #777;">Crie uma missão positiva acima para começar!</li>';
+            return;
+        }
+
+        tasks.forEach(task => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div class="task-info">
+                    <strong>${task.text}</strong>
+                </div>
+                <div class="actions">
+                    <span class="task-points">+${task.points} XP</span>
+                    <button class="complete-btn" onclick="completeTask(${task.id}, this)">FEITO</button>
+                    <button class="delete-btn" onclick="removeTask(${task.id})" title="Apagar tarefa">✖</button>
+                </div>
+            `;
+            taskList.appendChild(li);
+        });
+    }
+
+    // ===================================
+    // FUNÇÕES GERAIS / HUD
+    // ===================================
+
+    function updateHUD() {
+        const newLevel = Math.floor(score / XP_PER_LEVEL) + 1;
+        if(newLevel > level) {
+            alert(`🆙 SUBIU DE NÍVEL! Bem-vindo ao Nível ${newLevel}!`);
+        }
+        level = newLevel;
+
+        const displayScore = Math.max(0, score);
+        const currentLevelXP = displayScore % XP_PER_LEVEL;
+        const percentage = (currentLevelXP / XP_PER_LEVEL) * 100;
+        
+        if (score < 0) {
+            progressBar.style.width = `0%`;
+            xpNextLevel.innerText = `${score} / ${XP_PER_LEVEL} (Score Negativo)`;
+        } else {
+            progressBar.style.width = `${percentage}%`;
+            xpNextLevel.innerText = `${currentLevelXP} / ${XP_PER_LEVEL} para o próximo nível`;
+        }
+
+        scoreDisplay.innerText = score;
+        levelDisplay.innerText = `Nível ${level}`;
+    }
+    
+    function resetLevel() {
+        if (confirm("ATENÇÃO! Você tem certeza que deseja RESETAR seus pontos e nível? As tarefas e penalidades NÃO serão apagadas.")) {
+            score = 0;
+            level = 1;
+            
+            localStorage.setItem('rpg_score_v2', score);
+            
+            updateHUD();
+            alert("Pontos e nível resetados com sucesso! É hora de um novo ciclo de missões!");
+        }
+    }
+
+
+    // Atalhos de teclado
+    document.getElementById('taskInput').addEventListener("keypress", function(event) {
+        if (event.key === "Enter") addTask();
+    });
+    
+    document.getElementById('newPenaltyInput').addEventListener("keypress", function(event) {
+        if (event.key === "Enter") addPenalty();
+    });
+    
+</script>
+
+</body>
+</html>
